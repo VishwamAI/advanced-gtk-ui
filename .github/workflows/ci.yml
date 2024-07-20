@@ -1,0 +1,34 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gtk-version: ['3.0', '4.0']
+    steps:
+    - uses: actions/checkout@v3
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Install GTK development libraries
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtk-${{ matrix.gtk-version }}-dev
+    - name: Install linter
+      run: pip install flake8
+    - name: Run linter
+      run: flake8 .
+    - name: Build GTK application
+      run: |
+        gcc -o gtk_app main.c `pkg-config --cflags --libs gtk+-${{ matrix.gtk-version }}`
+    - name: Test GTK application
+      run: |
+        ./gtk_app --version
+        ./gtk_app --test-ui
